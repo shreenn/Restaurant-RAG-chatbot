@@ -1,0 +1,188 @@
+{
+  "name": "Basic RAG Chatbot",
+  "description": "A basic Retrieval Augmented Generation (RAG) chatbot using Langflow.",
+  "nodes": [
+    {
+      "id": "chat_input_node",
+      "type": "ChatInput",
+      "data": {
+        "node_type": "ChatInput",
+        "parameters": {
+          "text": "",
+          "sender_name": "User",
+          "input_label": "Type your message..."
+        }
+      },
+      "position": [0, 0]
+    },
+    {
+      "id": "message_history_node",
+      "type": "MessageHistory",
+      "data": {
+        "node_type": "MessageHistory",
+        "parameters": {
+          "template": "{sender_name}: {text}",
+          "output_key": "history"
+        }
+      },
+      "position": [0, 300]
+    },
+    {
+      "id": "memory_node",
+      "type": "ConversationBufferMemory",
+      "data": {
+        "node_type": "ConversationBufferMemory",
+        "parameters": {
+          "memory_key": "chat_history",
+          "input_key": "question",
+          "output_key": "history"
+        }
+      },
+      "position": [250, 300]
+    },
+    {
+      "id": "openai_embeddings_node",
+      "type": "OpenAIEmbeddings",
+      "data": {
+        "node_type": "OpenAIEmbeddings",
+        "parameters": {
+          "openai_api_key": "YOUR_OPENAI_API_KEY",
+          "model_name": "text-embedding-ada-002"
+        }
+      },
+      "position": [250, 0]
+    },
+    {
+      "id": "chroma_node",
+      "type": "Chroma",
+      "data": {
+        "node_type": "Chroma",
+        "parameters": {
+          "collection_name": "my_rag_collection",
+          "persist_directory": "./chroma_db",
+          "search_kwargs": {
+            "k": 4
+          }
+        }
+      },
+      "position": [500, 0]
+    },
+    {
+      "id": "retriever_node",
+      "type": "VectorStoreRetriever",
+      "data": {
+        "node_type": "VectorStoreRetriever",
+        "parameters": {
+          "search_type": "similarity"
+        }
+      },
+      "position": [750, 0]
+    },
+    {
+      "id": "prompt_node",
+      "type": "PromptTemplate",
+      "data": {
+        "node_type": "PromptTemplate",
+        "parameters": {
+          "template": "You are a helpful AI assistant. Answer the user's question based on the provided context and chat history.\n\nContext:\n{context}\n\nChat History:\n{history}\n\nQuestion:\n{question}\n\nAnswer:",
+          "template_variables": ["context", "history", "question"]
+        }
+      },
+      "position": [750, 300]
+    },
+    {
+      "id": "openai_llm_node",
+      "type": "OpenAI",
+      "data": {
+        "node_type": "OpenAI",
+        "parameters": {
+          "openai_api_key": "YOUR_OPENAI_API_KEY",
+          "model_name": "gpt-4o",
+          "temperature": 0.3,
+          "streaming": true
+        }
+      },
+      "position": [1000, 300]
+    },
+    {
+      "id": "chat_output_node",
+      "type": "ChatOutput",
+      "data": {
+        "node_type": "ChatOutput",
+        "parameters": {
+          "sender_type": "Machine",
+          "sender_name": "AI"
+        }
+      },
+      "position": [1250, 300]
+    }
+  ],
+  "edges": [
+    {
+      "source": "chat_input_node",
+      "sourceHandle": "text",
+      "target": "openai_embeddings_node",
+      "targetHandle": "input_value"
+    },
+    {
+      "source": "chat_input_node",
+      "sourceHandle": "text",
+      "target": "retriever_node",
+      "targetHandle": "query"
+    },
+    {
+      "source": "chat_input_node",
+      "sourceHandle": "text",
+      "target": "memory_node",
+      "targetHandle": "input"
+    },
+    {
+      "source": "chat_input_node",
+      "sourceHandle": "text",
+      "target": "prompt_node",
+      "targetHandle": "question"
+    },
+    {
+      "source": "message_history_node",
+      "sourceHandle": "history",
+      "target": "memory_node",
+      "targetHandle": "input_history"
+    },
+    {
+      "source": "memory_node",
+      "sourceHandle": "history",
+      "target": "prompt_node",
+      "targetHandle": "history"
+    },
+    {
+      "source": "openai_embeddings_node",
+      "sourceHandle": "embedding",
+      "target": "chroma_node",
+      "targetHandle": "embedding_model"
+    },
+    {
+      "source": "chroma_node",
+      "sourceHandle": "vector_store",
+      "target": "retriever_node",
+      "targetHandle": "vector_store"
+    },
+    {
+      "source": "retriever_node",
+      "sourceHandle": "documents",
+      "target": "prompt_node",
+      "targetHandle": "context"
+    },
+    {
+      "source": "prompt_node",
+      "sourceHandle": "output_value",
+      "target": "openai_llm_node",
+      "targetHandle": "input_value"
+    },
+    {
+      "source": "openai_llm_node",
+      "sourceHandle": "language_model",
+      "target": "chat_output_node",
+      "targetHandle": "text"
+    }
+  ]
+}
